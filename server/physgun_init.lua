@@ -1,14 +1,13 @@
 -- Allow client's to send where they think the vehicles are? (def: true)
 local trustClients = true
 
--- Use ZED permissions?
-local useZED = false -- Permissions: pickup_vehicles to pickup vehicles and pickup_players to pickup players.
+-- Do people need permission to pickup vehicles?
+local pickupVehiclesRequiresPermission = false
 
--- If not using ZED
-local useWhiteListForVehicles = false   -- Do you want to use the whitelist for vehicles?
-local useWhiteListForPlayers = true     -- Do you want to use the whitelist for players?
+-- Do people need permission to pickup players?
+local pickupPlayersRequiresPermission = true
 
--- The whitelist in question
+-- A whitelist to use if permission is required
 local whiteList = {
     ["STEAM_0:0:14045128"] = true,  -- Ash47
     ["STEAM_0:0:X4045121"] = true,  -- No one
@@ -17,37 +16,25 @@ local whiteList = {
 
 -- This function determines if a player can pickup a vehicle
 function AllowedToPickupVehicle(ply, veh)
-    -- Check if we are using ZED
-    if useZED then
-        -- Check if this player has the permissions
-        return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"}) -- returns false if the player has the permission, true if not
+    -- Check if we are using a whitelist
+    if pickupVehiclesRequiresPermission then
+        -- Check if this player is on our whitelist
+        return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"})
     else
-        -- Check if we are using a whitelist
-        if useWhiteListForVehicles then
-            -- Check if this player is on our whitelist
-            return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
-        else
-            -- Nope, allow them to use this
-            return true
-        end
+        -- Nope, allow them to use this
+        return true
     end
 end
 
 -- This function determains if a player can pickup another player
 function AllowedToPickupPlayer(ply, otherPly)
-    -- Check if we are using ZED
-    if useZED then
-        -- Check if this player has the permissions
-        return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"}) -- returns false if the player has the permission, true if not
+    -- Check if we are using a whitelist for players
+    if pickupPlayersRequiresPermission then
+        -- Check if this player is on our whitelist
+        return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"})
     else
-        -- Check if we are using a whitelist for players
-        if useWhiteListForPlayers then
-            -- Check if this player is on our whitelist
-            return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
-        else
-            -- Nope, allow them to use it
-            return true
-        end
+        -- Nope, allow them to use it
+        return true
     end
 end
 
