@@ -128,6 +128,11 @@ Events:Subscribe("LocalPlayerInput", function(args)
     -- Only do this if we have something grabbed
     if not hGrabbed then return end
 
+	-- Prevent weapon switching while holding something
+	if (args.input == Action.SwitchWeapon) or (args.input == Action.NextWeapon) or (args.input == Action.PrevWeapon) then
+		return false
+	end
+	
     if args.input == Action.UseItem then
         return false
     end
