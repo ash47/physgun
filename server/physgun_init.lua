@@ -1,6 +1,6 @@
 -- Allow client's to send where they think the vehicles are? (def: true)
 local trustClients = true
-local useZED = false -- Permissions: pickup_vehicles to pickup vehicles and pickup_players to pickup players.
+-- ZED: Permissions: pickup_vehicles to pickup vehicles and pickup_players to pickup players.
 
 -- This function determins if a player can use this plugin or not
 local whiteList = {
@@ -10,22 +10,14 @@ local whiteList = {
 }
 
 function AllowedToPickupVehicle(ply, veh)
-    if useZED then
-        -- Check if this player has the permissions
-        return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"}) -- returns false if the player has the permission, true if not
-    else
-       -- Check if this player is on our whitelist
-        return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
-    end
+    -- Check if this player has the permissions
+    -- Check if this player is on our whitelist or has the permission to do this.
+    return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"}) -- returns true if the player is in the whitelist, nil if not
 end
 function AllowedToPickupPlayer(ply, otherPly)
-    if useZED then
-        -- Check if this player has the permissions
-        return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"}) -- returns false if the player has the permission, true if not
-    else
-       -- Check if this player is on our whitelist
-        return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
-    end
+    -- Check if this player has the permissions
+    -- Check if this player is on our whitelist or has the permission to do this.
+    return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"}) -- returns true if the player is in the whitelist, nil if not
 end
 
 -- Table of what is picked up
