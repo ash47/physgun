@@ -4,6 +4,11 @@ Physgun for JC2: MP
 ###How to install###
  - Stick the client and server folders into `Just Cause 2 - Multiplayer Dedicated Server/scripts/physgun`
 
+###What are the controls?###
+ - Hold G to grab things
+ - While holding G, hold E to rotate what ever you are holding
+ - Scroll the mouse in and out to move what ever you are holding away from / towards yourself
+
 ###How do I make it admin only?###
  - There are two functions `AllowedToPickupVehicle` and `AllowedToPickupPlayer` in `server/physgun_init.lua`, these control who is allowed to pickup certain things
  - By default, anyone can pickup vehicles, and only white listed people can pickup other players, it's pretty straight forward to change these hooks to your likings
