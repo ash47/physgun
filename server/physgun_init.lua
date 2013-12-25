@@ -8,13 +8,14 @@ local useZED = false -- Permissions: pickup_vehicles to pickup vehicles and pick
 local useWhiteListForVehicles = false   -- Do you want to use the whitelist for vehicles?
 local useWhiteListForPlayers = true     -- Do you want to use the whitelist for players?
 
--- This function determins if a player can use this plugin or not
+-- The whitelist in question
 local whiteList = {
     ["STEAM_0:0:14045128"] = true,  -- Ash47
     ["STEAM_0:0:X4045121"] = true,  -- No one
     ["STEAM_0:0:Z4045122"] = true,  -- Another Example
 }
 
+-- This function determines if a player can pickup a vehicle
 function AllowedToPickupVehicle(ply, veh)
     -- Check if we are using ZED
     if useZED then
@@ -31,6 +32,8 @@ function AllowedToPickupVehicle(ply, veh)
         end
     end
 end
+
+-- This function determains if a player can pickup another player
 function AllowedToPickupPlayer(ply, otherPly)
     -- Check if we are using ZED
     if useZED then
