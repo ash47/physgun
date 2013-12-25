@@ -1,5 +1,6 @@
 -- Allow client's to send where they think the vehicles are? (def: true)
 local trustClients = true
+local useZED = false -- Permissions: pickup_vehicles to pickup vehicles and pickup_players to pickup players.
 
 -- This function determins if a player can use this plugin or not
 local whiteList = {
@@ -7,21 +8,23 @@ local whiteList = {
     ["STEAM_0:0:X4045121"] = true,  -- No one
     ["STEAM_0:0:Z4045122"] = true,  -- Another Example
 }
+
 function AllowedToPickupVehicle(ply, veh)
-    -- Check if this player is on our whitelist
-    if whiteList[ply:GetSteamId().string] then
-        return true
+    if useZED then
+        -- Check if this player has the permissions
+        return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"}) -- returns false if the player has the permission, true if not
     else
-        --return false
-        return true
+       -- Check if this player is on our whitelist
+        return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
     end
 end
 function AllowedToPickupPlayer(ply, otherPly)
-    -- Check if this player is on our whitelist
-    if whiteList[ply:GetSteamId().string] then
-        return true
+    if useZED then
+        -- Check if this player has the permissions
+        return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"}) -- returns false if the player has the permission, true if not
     else
-        return false
+       -- Check if this player is on our whitelist
+        return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
     end
 end
 
