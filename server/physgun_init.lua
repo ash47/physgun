@@ -1,6 +1,12 @@
 -- Allow client's to send where they think the vehicles are? (def: true)
 local trustClients = true
+
+-- Use ZED permissions?
 local useZED = false -- Permissions: pickup_vehicles to pickup vehicles and pickup_players to pickup players.
+
+-- If not using ZED
+local useWhiteListForVehicles = false   -- Do you want to use the whitelist for vehicles?
+local useWhiteListForPlayers = true     -- Do you want to use the whitelist for players?
 
 -- This function determins if a player can use this plugin or not
 local whiteList = {
@@ -10,21 +16,35 @@ local whiteList = {
 }
 
 function AllowedToPickupVehicle(ply, veh)
+    -- Check if we are using ZED
     if useZED then
         -- Check if this player has the permissions
         return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"}) -- returns false if the player has the permission, true if not
     else
-       -- Check if this player is on our whitelist
-        return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
+        -- Check if we are using a whitelist
+        if useWhiteListForVehicles then
+            -- Check if this player is on our whitelist
+            return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
+        else
+            -- Nope, allow them to use this
+            return true
+        end
     end
 end
 function AllowedToPickupPlayer(ply, otherPly)
+    -- Check if we are using ZED
     if useZED then
         -- Check if this player has the permissions
         return not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"}) -- returns false if the player has the permission, true if not
     else
-       -- Check if this player is on our whitelist
-        return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
+        -- Check if we are using a whitelist for players
+        if useWhiteListForPlayers then
+            -- Check if this player is on our whitelist
+            return whiteList[ply:GetSteamId().string] -- returns true if the player is in the whitelist, nil if not
+        else
+            -- Nope, allow them to use it
+            return true
+        end
     end
 end
 
