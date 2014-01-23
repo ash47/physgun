@@ -239,17 +239,20 @@ Events:Subscribe("LocalPlayerInput", function(args)
     if physEnabled then
         -- Stop primary fire
         if args.input == Action.FireRight then
-            -- Stop the tool from firing over and over
-            if Client:GetElapsedSeconds()-nLastFire > 0.1 then
-                -- Use a tool
-                useTool(true)
-            else
-                -- The tool is being held
-                useTool(false)
-            end
+            -- Only use a tool if we're not in a menu
+            if not inMenu then
+                -- Stop the tool from firing over and over
+                if Client:GetElapsedSeconds()-nLastFire > 0.1 then
+                    -- Use a tool
+                    useTool(true)
+                else
+                    -- The tool is being held
+                    useTool(false)
+                end
 
-            -- Store the last time we fired the event
-            nLastFire = Client:GetElapsedSeconds()
+                -- Store the last time we fired the event
+                nLastFire = Client:GetElapsedSeconds()
+            end
 
             -- Don't shoot
             return false
