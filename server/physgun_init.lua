@@ -16,7 +16,7 @@ local spawningRequiresPermission = true
 -- A whitelist to use if permission is required
 local whiteList = {
     ["STEAM_0:0:14045128"] = true,  -- Ash47
-    ["STEAM_0:0:X4045121"] = true,  -- No one
+    ["STEAM_0:0:29540342"] = true,  -- Dude who helps me test
     ["STEAM_0:0:Z4045122"] = true,  -- Another Example
 }
 
@@ -225,6 +225,4 @@ Network:Subscribe("47phys_Spawn", function(args, ply)
         collision = args.archive.."/"..args.physics,
         world = ply:GetWorld()
     })
-
-    print("spawned!")
 end)

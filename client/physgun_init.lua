@@ -147,7 +147,7 @@ Events:Subscribe("PostTick", function()
         if Client:GetElapsedSeconds() > nNextThink then
             -- Check if we've stopped firing
             local nLastFire = Client:GetElapsedSeconds()-nLastFire
-            if nLastFire > 0.25 then
+            if nLastFire > 0.05 then
                 -- Drop the item
                 dropEntity()
                 return
