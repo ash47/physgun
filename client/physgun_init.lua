@@ -125,8 +125,17 @@ Events:Subscribe("KeyDown", function(args)
             local treeview = Tree.Create(spawnMenu)
             treeview:SetDock(GwenPosition.Fill)
 
+            local rootNodes = {}
+
             for k, v in ipairs(models) do
-                node = treeview:AddNode(v.name)
+                local parts = split(v.name, "\\")
+                local root = rootNodes[parts[1]] or treeview:AddNode(parts[1])
+                rootNodes[parts[1]] = root
+
+                local sub = rootNodes[parts[1].."\\"..parts[2]] or root:AddNode(parts[2])
+                rootNodes[parts[1].."\\"..parts[2]] = sub
+
+                local node = sub:AddNode(v.name)
 
                 for k2, v2 in ipairs(v.files) do
                     child_node = node:AddNode(v2.model)
@@ -410,3 +419,11 @@ Events:Subscribe("Render", function()
         Render:DrawText(pos, txt, col, txtSize)
     end
 end)
+
+function split(s, delimiter)
+    result = {};
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match);
+    end
+    return result;
+end
