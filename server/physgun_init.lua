@@ -10,6 +10,9 @@ local pickupStaticRequiresPermission = false
 -- Do people need permission to pickup players?
 local pickupPlayersRequiresPermission = true
 
+-- Do people need permission to spawn objects?
+local spawningRequiresPermission = true
+
 -- A whitelist to use if permission is required
 local whiteList = {
     ["STEAM_0:0:14045128"] = true,  -- Ash47
@@ -53,6 +56,18 @@ function AllowedToPickup(ply, ent)
             -- Nope, allow them to use this
             return true
         end
+    end
+end
+
+-- This function determines if a player can spawn an object
+function AllowedToSpawn(ply)
+    -- Check if we are using a whitelist
+    if spawningRequiresPermission then
+        -- Check if this player is on our whitelist
+        return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="spawn_object"})
+    else
+        -- Nope, allow them to use this
+        return true
     end
 end
 
@@ -192,22 +207,24 @@ Network:Subscribe("47phys_Zoom", function(delta, ply)
 end)
 
 -- Player wants to spawn something
---[[Network:Subscribe("47phys_Spawn", function(args, ply)
+Network:Subscribe("47phys_Spawn", function(args, ply)
+    -- Check if this player has permission to spawn stuff
+    if not AllowedToSpawn(ply) then return end
+
     -- Grab where the player is looking
     local oTrace = ply:GetAimTarget()
     local pos = oTrace.position
 
-    -- Spawn the object
-    --local path = "areaset01.bl/gb084-a.lod"
-    --StaticObject.Create(pos, , path)
+    -- We should probably validate what they are spawning!
 
+    -- Spawn the object
     StaticObject.Create({
         position = pos,
         angle = Angle(0, 0, 0),
-        model = "17x48.fl/go666-b.lod",
-        collision = "17x48.fl/go666_lod1-b_col.pfx",
+        model = args.archive.."/"..args.lod,
+        collision = args.archive.."/"..args.physics,
         world = ply:GetWorld()
     })
 
     print("spawned!")
-end)]]
+end)
