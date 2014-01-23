@@ -73,13 +73,15 @@ local function dropEntity()
     Network:Send("47phys_Drop")
 end
 
-local function useTool()
+local function useTool(pressed)
     if currentTool == TOOL_PHYSGUN then
         -- Attempt to pickup an entity
         pickupEntity()
     elseif currentTool == TOOL_REMOVER then
-        -- Attempt to remove an entity
-        removeEntity()
+        if pressed then
+            -- Attempt to remove an entity
+            removeEntity()
+        end
     end
 end
 
@@ -240,7 +242,10 @@ Events:Subscribe("LocalPlayerInput", function(args)
             -- Stop the tool from firing over and over
             if Client:GetElapsedSeconds()-nLastFire > 0.1 then
                 -- Use a tool
-                useTool()
+                useTool(true)
+            else
+                -- The tool is being held
+                useTool(false)
             end
 
             -- Store the last time we fired the event
