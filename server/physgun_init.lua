@@ -20,6 +20,9 @@ local whiteList = {
     ["STEAM_0:0:Z4045122"] = true,  -- Another Example
 }
 
+-- Stores player's current undo status
+local undoList = {}
+
 -- This function determines if a player can pickup a vehicle
 function AllowedToPickup(ply, ent)
     -- Pretty dodgy way to tell stuff apart
@@ -218,11 +221,53 @@ Network:Subscribe("47phys_Spawn", function(args, ply)
     -- We should probably validate what they are spawning!
 
     -- Spawn the object
-    StaticObject.Create({
+    local ent = StaticObject.Create({
         position = pos,
         angle = Angle(0, 0, 0),
         model = args.archive.."/"..args.lod,
         collision = args.archive.."/"..args.physics,
         world = ply:GetWorld()
     })
+
+    -- Add this object to their undo list
+    addUndo(ply, ent)
 end)
+
+-- Player wants to undo a spawned object
+Network:Subscribe("47phys_Undo", function(args, ply)
+    -- Grab user's SteamID
+    local sid = ply:GetSteamId().string
+
+    -- Make sure they have an undo list
+    if not undoList[sid] then
+        ply:SendChatMessage("There is nothing else you can undo", Color(255, 0, 0, 255))
+        return
+    end
+
+    -- Make sure there is something to undo
+    if #undoList[sid] > 0 then
+        -- Grab the last entity spawned
+        local ent = table.remove(undoList[sid], #undoList[sid])
+
+        -- Make sure the ent is still valid
+        if ent then
+            -- Remove the entity
+            ent:Remove()
+        end
+
+        ply:SendChatMessage("Object was undone", Color(255, 0, 0, 255))
+    else
+        ply:SendChatMessage("There is nothing else you can undo", Color(255, 0, 0, 255))
+    end
+end)
+
+function addUndo(ply, ent)
+    -- Grab user's SteamID
+    local sid = ply:GetSteamId().string
+
+    -- Make sure they have an undo list
+    undoList[sid] = undoList[sid] or {}
+
+    -- Add this object into their undo list
+    table.insert(undoList[sid], ent)
+end

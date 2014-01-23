@@ -102,6 +102,11 @@ Events:Subscribe("KeyDown", function(args)
                 end
             end
         end
+
+        -- Undo
+        if args.key == string.byte("Z") then
+            Network:Send("47phys_Undo")
+        end
     end
 end)
 
