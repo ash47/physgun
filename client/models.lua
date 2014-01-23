@@ -6208,7 +6208,7 @@ models = {
 		{model = 'gb056-e.lod', physics = 'gb056_lod1-e_col.pfx'},
 	}
 },
-{
+--[[{
 	name = 'locations\\metropolis\\city.district.a1.houses.flz',
 	files = {
 		{model = 'go166_01-d.lod', physics = 'go166_01_lod1-d_col.pfx'},
@@ -6249,7 +6249,7 @@ models = {
 		{model = 'gb500-b.lod', physics = 'gb500_lod1-b_col.pfx'},
 		{model = 'gb500-c.lod', physics = 'gb500_lod1-c_col.pfx'},
 	}
-},
+},]]
 {
 	name = 'locations\\strongholds\\f1s02\\f1s02.base.flz',
 	files = {
