@@ -11,9 +11,50 @@ local aCamAng
 local vCamPos
 local nNextThink = 0
 local vRot = Vector2(0, 0)
+local nLastFire = 0
+
+-- Physgun is disabled by default
+local physEnabled = false
+
+local function pickupEntity()
+    -- Make sure we haven't already grabbed something
+    if not hGrabbed then
+        local oTrace = LocalPlayer:GetAimTarget()
+
+        -- Attempt to grab an entity
+        local ent = oTrace.entity
+        if ent then
+            -- Store this as our grabbed entity
+            hGrabbed = ent
+            bRotating = false
+
+            -- Tell the server
+            Network:Send("47phys_Pickup", {
+                ent = ent,
+                pos = ent:GetPosition(),
+                ang = ent:GetAngle(),
+                plyAngle = Camera:GetAngle()
+            })
+
+            return
+        end
+    end
+end
+
+local function dropEntity()
+    hGrabbed = nil
+    bRotating = false
+    Network:Send("47phys_Drop")
+end
 
 -- Hook key pressed
 Events:Subscribe("KeyDown", function(args)
+    --[[-- Spawn Stuff
+    if args.key == string.byte("P") then
+        -- Tell the server
+        Network:Send("47phys_Spawn", {})
+    end]]
+
     if hGrabbed then
         -- Rotation
         if args.key == string.byte("E") then
@@ -24,60 +65,12 @@ Events:Subscribe("KeyDown", function(args)
             aCamAng = Camera:GetAngle()
             vCamPos = Camera:GetPosition()
         end
-    else
-        -- Trying to grab something
-        if args.key == string.byte("G") then
-            local oTrace = LocalPlayer:GetAimTarget()
-
-            -- Attempt to grab a car
-            local veh = oTrace.vehicle
-            if veh then
-                -- Store this as our grabbed entity
-                hGrabbed = veh
-                bRotating = false
-
-                -- Tell the server
-                Network:Send("47phys_Pickup", {
-                    veh = veh,
-                    pos = veh:GetPosition(),
-                    ang = veh:GetAngle(),
-                    plyAngle = Camera:GetAngle()
-                })
-
-                return
-            end
-
-            -- Attempt to grab a player
-            local player = oTrace.player
-            if player then
-                -- Store this as our grabbed entity
-                hGrabbed = player
-                bRotating = false
-
-                -- Tell the server
-                Network:Send("47phys_Pickup", {
-                    otherPly = player,
-                    pos = player:GetPosition(),
-                    ang = player:GetAngle(),
-                    plyAngle = Camera:GetAngle()
-                })
-
-                return
-            end
-        end
     end
 end)
 
 Events:Subscribe("KeyUp", function(args)
     -- If we have something grabbed
     if hGrabbed then
-        -- Stop grabbing something
-        if args.key == string.byte("G") then
-            hGrabbed = nil
-            bRotating = false
-            Network:Send("47phys_Drop")
-        end
-
         -- Stop rotating
         if args.key == string.byte("E") then
             bRotating = false
@@ -98,6 +91,14 @@ Events:Subscribe("PostTick", function()
     if hGrabbed then
         -- Check if it's time to send an update
         if Client:GetElapsedSeconds() > nNextThink then
+            -- Check if we've stopped firing
+            local nLastFire = Client:GetElapsedSeconds()-nLastFire
+            if nLastFire > 0.25 then
+                -- Drop the item
+                dropEntity()
+                return
+            end
+
             -- Delay the next update
             nNextThink = Client:GetElapsedSeconds() + nUpdateTime
 
@@ -125,45 +126,60 @@ end)
 
 -- Stop getting into the car, and hook camera rotations
 Events:Subscribe("LocalPlayerInput", function(args)
-    -- Only do this if we have something grabbed
-    if not hGrabbed then return end
+    -- Check if the physgun is enabled
+    if physEnabled then
+        -- Stop primary fire
+        if args.input == Action.FireRight then
+            -- Store the last time we fired the event
+            nLastFire = Client:GetElapsedSeconds()
 
-	-- Prevent weapon switching while holding something
-	if (args.input == Action.SwitchWeapon) or (args.input == Action.NextWeapon) or (args.input == Action.PrevWeapon) then
-		return false
-	end
-	
-    if args.input == Action.UseItem then
-        return false
-    end
+            -- Attempt to pickup an entity
+            pickupEntity()
+            return false
+        end
 
-    -- Rotation
-    if not bRotating then return end
+        -- Only do this if we have something grabbed
+        if not hGrabbed then return end
 
-    if args.input == Action.LookRight then
-        vRot.x = vRot.x + 1
-        return false
-    end
+    	-- Prevent weapon switching while holding something
+    	if (args.input == Action.SwitchWeapon) or (args.input == Action.NextWeapon) or (args.input == Action.PrevWeapon) then
+    		return false
+    	end
 
-    if args.input == Action.LookLeft then
-        vRot.x = vRot.x - 1
-        return false
-    end
+        if args.input == Action.UseItem then
+            return false
+        end
 
-    if args.input == Action.LookUp then
-        vRot.y = vRot.y - 1
-        return false
-    end
+        -- Rotation
+        if not bRotating then return end
 
-    if args.input == Action.LookDown then
-        vRot.y = vRot.y + 1
-        return false
+        if args.input == Action.LookRight then
+            vRot.x = vRot.x + 1
+            return false
+        end
+
+        if args.input == Action.LookLeft then
+            vRot.x = vRot.x - 1
+            return false
+        end
+
+        if args.input == Action.LookUp then
+            vRot.y = vRot.y - 1
+            return false
+        end
+
+        if args.input == Action.LookDown then
+            vRot.y = vRot.y + 1
+            return false
+        end
     end
 end)
 
 -- Add /rotspeed command
 Events:Subscribe("LocalPlayerChat", function(args)
     local cmd = args.text:split(" ")
+
+    -- Rotational speed command
     if cmd[1] == "/rotspeed" then
         if #cmd ~= 2 then
             Chat:Print("/rotspeed [speed]", Color(255, 0, 0, 255))
@@ -173,6 +189,19 @@ Events:Subscribe("LocalPlayerChat", function(args)
 
         -- Update rotation speed
         nRotationFactor = 1 / tonumber(cmd[2])
+        return false
+    end
+
+    -- Toggle Physgun command
+    if cmd[1] == "/phys" then
+        -- Toggle the physgun state
+        physEnabled = not physEnabled
+
+        if physEnabled then
+            Chat:Print("Physgun Enabled", Color(255, 0, 0, 255))
+        else
+            Chat:Print("Physgun Disabled", Color(255, 0, 0, 255))
+        end
         return false
     end
 end)

@@ -4,6 +4,9 @@ local trustClients = true
 -- Do people need permission to pickup vehicles?
 local pickupVehiclesRequiresPermission = false
 
+-- Do people need permission to pickup static objects?
+local pickupStaticRequiresPermission = false
+
 -- Do people need permission to pickup players?
 local pickupPlayersRequiresPermission = true
 
@@ -15,26 +18,41 @@ local whiteList = {
 }
 
 -- This function determines if a player can pickup a vehicle
-function AllowedToPickupVehicle(ply, veh)
-    -- Check if we are using a whitelist
-    if pickupVehiclesRequiresPermission then
-        -- Check if this player is on our whitelist
-        return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"})
-    else
-        -- Nope, allow them to use this
-        return true
-    end
-end
+function AllowedToPickup(ply, ent)
+    -- Pretty dodgy way to tell stuff apart
+    if ent.GetSteamId then
+        -- Must be a player
 
--- This function determains if a player can pickup another player
-function AllowedToPickupPlayer(ply, otherPly)
-    -- Check if we are using a whitelist for players
-    if pickupPlayersRequiresPermission then
-        -- Check if this player is on our whitelist
-        return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"})
+        -- Check if we are using a whitelist for players
+        if pickupPlayersRequiresPermission then
+            -- Check if this player is on our whitelist
+            return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_players"})
+        else
+            -- Nope, allow them to use it
+            return true
+        end
+    elseif ent.GetDriver then
+        -- Must be a vehicle
+
+        -- Check if we are using a whitelist
+        if pickupVehiclesRequiresPermission then
+            -- Check if this player is on our whitelist
+            return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles"})
+        else
+            -- Nope, allow them to use this
+            return true
+        end
     else
-        -- Nope, allow them to use it
-        return true
+        -- Must be a static object
+
+        -- Check if we are using a whitelist
+        if pickupStaticRequiresPermission then
+            -- Check if this player is on our whitelist
+            return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_static_object"})
+        else
+            -- Nope, allow them to use this
+            return true
+        end
     end
 end
 
@@ -90,15 +108,16 @@ end
 
 -- A player wants to pick something up
 Network:Subscribe("47phys_Pickup", function(args, ply)
-    -- Grab the vehicle they parsed
-    local veh = args.veh
-    if veh and AllowedToPickupVehicle(ply, veh) then
-        -- Check if someone else is already grabbing this car
-        if canPickup(ply, veh) then
+    -- Grab the entity they parsed
+    local ent = args.ent
+
+    if ent and AllowedToPickup(ply, ent) then
+        -- Check if someone else is already grabbing this entity
+        if canPickup(ply, ent) then
             -- If we don't trust the clients, use server values
             if not trustClients then
-                args.pos = veh:GetPosition()
-                args.ang = veh:GetAngle()
+                args.pos = ent:GetPosition()
+                args.ang = ent:GetAngle()
             end
 
             local dist = ply:GetPosition():Distance(args.pos)
@@ -107,41 +126,14 @@ Network:Subscribe("47phys_Pickup", function(args, ply)
             -- Store what is picked up
             addPickup({
                 ply = ply,
-                veh = veh,
+                ent = ent,
                 offset = offset,
                 dist = dist
             })
 
-            -- Update the vehicle
-            veh:SetAngle(args.ang)
-            veh:SetPosition(args.pos)
-        end
-    end
-
-    local otherPly = args.otherPly
-    if otherPly and AllowedToPickupPlayer(ply, otherPly) then
-        -- Check if someone else is already grabbing this car
-        if canPickup(ply, otherPly) then
-            -- If we don't trust the clients, use server values
-            if not trustClients then
-                args.pos = otherPly:GetPosition()
-                args.ang = otherPly:GetAngle()
-            end
-
-            local dist = ply:GetPosition():Distance(args.pos)
-            local offset = args.pos - (ply:GetPosition() + (args.plyAngle * Vector3(0,0,-dist)))
-
-            -- Store what is picked up
-            addPickup({
-                ply = ply,
-                otherPly = otherPly,
-                offset = offset,
-                dist = dist
-            })
-
-            -- Update the vehicle
-            otherPly:SetAngle(args.ang)
-            otherPly:SetPosition(args.pos)
+            -- Update the entity
+            ent:SetAngle(args.ang)
+            ent:SetPosition(args.pos)
         end
     end
 end)
@@ -153,34 +145,33 @@ Network:Subscribe("47phys_Update", function(args, ply)
     -- Check if hte player has something picked up
     if pickup then
         -- Grab vars
-        local veh = pickup.veh
-        local toMove = veh or pickup.otherPly
+        local ent = pickup.ent
 
         -- Check if what we want to move is still valid
-        if toMove then
+        if ent then
             -- Grab offsets
             local offset = pickup.offset
             local dist = pickup.dist
 
             -- Move Pickup
-            toMove:SetPosition((ply:GetPosition() + (args.a * Vector3(0,0,-dist))) + offset)
+            ent:SetPosition((ply:GetPosition() + (args.a * Vector3(0,0,-dist))) + offset)
 
             -- Workout rotations
-            local rx = -toMove:GetAngle() * Vector3(0, 1, 0)
-            local ry = -toMove:GetAngle() * Vector3(-math.cos(args.a.yaw), 0, math.sin(args.a.yaw))
+            local rx = -ent:GetAngle() * Vector3(0, 1, 0)
+            local ry = -ent:GetAngle() * Vector3(-math.cos(args.a.yaw), 0, math.sin(args.a.yaw))
 
             local rotx = Angle.AngleAxis((args.x or 0), rx)
             local roty = Angle.AngleAxis((args.y or 0), ry)
 
             -- Apply rotation
-            toMove:SetAngle(toMove:GetAngle() * rotx * roty)
+            ent:SetAngle(ent:GetAngle() * rotx * roty)
         end
 
         -- Check if we picked up a vehicle
-        if veh then
+        if ent.GetDriver then
             -- Stop it from falling
-            veh:SetLinearVelocity(Vector3(0, 0, 0))
-            veh:SetAngularVelocity(Vector3(0, 0, 0))
+            ent:SetLinearVelocity(Vector3(0, 0, 0))
+            ent:SetAngularVelocity(Vector3(0, 0, 0))
         end
     end
 end)
@@ -199,3 +190,24 @@ Network:Subscribe("47phys_Zoom", function(delta, ply)
         pickup.dist = pickup.dist + tonumber(delta) * 2
     end
 end)
+
+-- Player wants to spawn something
+--[[Network:Subscribe("47phys_Spawn", function(args, ply)
+    -- Grab where the player is looking
+    local oTrace = ply:GetAimTarget()
+    local pos = oTrace.position
+
+    -- Spawn the object
+    --local path = "areaset01.bl/gb084-a.lod"
+    --StaticObject.Create(pos, , path)
+
+    StaticObject.Create({
+        position = pos,
+        angle = Angle(0, 0, 0),
+        model = "17x48.fl/go666-b.lod",
+        collision = "17x48.fl/go666_lod1-b_col.pfx",
+        world = ply:GetWorld()
+    })
+
+    print("spawned!")
+end)]]
