@@ -13,8 +13,12 @@ Physgun for JC2: MP
 # How do I access the spawn menu?
  - Hold Q while in physgun mode
 
+# How do I change tools?
+ - While in physgun mode, simply scroll the mouse wheel to change tools (the current tool should be indicated below the map)
+
 # How do I delete stuff
  - You can undo things (in the order you spawned them) by pressing Z while in physgun mode
+ - You can also use the remover to remove things
 
 ###How do I make it admin only?###
  - There are four permission settings in `server/physgun_init.lua`, these control who is allowed to pickup certain things

@@ -1,5 +1,3 @@
-print(models)
-
 -- How often to update the physguned object (in seconds)
 local nUpdateTime = 0.1
 
@@ -21,6 +19,13 @@ local physEnabled = false
 -- Container for the spawn menu
 local spawnMenu
 local inMenu = false
+
+-- Tool related stuff
+local TOOL_PHYSGUN = 1
+local TOOL_REMOVER = 2
+local MIN_TOOL = TOOL_PHYSGUN
+local MAX_TOOL = TOOL_REMOVER
+local currentTool = TOOL_PHYSGUN
 
 local function pickupEntity()
     -- Make sure we haven't already grabbed something
@@ -47,10 +52,35 @@ local function pickupEntity()
     end
 end
 
+local function removeEntity()
+    local oTrace = LocalPlayer:GetAimTarget()
+
+    -- Attempt to remove an ent
+    local ent = oTrace.entity
+    if ent then
+        -- Tell the server
+        Network:Send("47phys_Remove", {
+            ent = ent
+        })
+
+        return
+    end
+end
+
 local function dropEntity()
     hGrabbed = nil
     bRotating = false
     Network:Send("47phys_Drop")
+end
+
+local function useTool()
+    if currentTool == TOOL_PHYSGUN then
+        -- Attempt to pickup an entity
+        pickupEntity()
+    elseif currentTool == TOOL_REMOVER then
+        -- Attempt to remove an entity
+        removeEntity()
+    end
 end
 
 -- Hook key pressed
@@ -139,8 +169,26 @@ end)
 
 -- Hook mouse scroll
 Events:Subscribe("MouseScroll", function(args)
-    if physEnabled and hGrabbed then
-        Network:Send("47phys_Zoom", args.delta)
+    if physEnabled then
+        -- Check if we have something grabbed
+        if hGrabbed then
+            Network:Send("47phys_Zoom", args.delta)
+        else
+            -- Change tools
+            if args.delta > 0 then
+                currentTool = currentTool+1
+
+                if currentTool > MAX_TOOL then
+                    currentTool = MIN_TOOL
+                end
+            else
+                currentTool = currentTool-1
+
+                if currentTool < MIN_TOOL then
+                    currentTool = MAX_TOOL
+                end
+            end
+        end
     end
 end)
 
@@ -189,11 +237,16 @@ Events:Subscribe("LocalPlayerInput", function(args)
     if physEnabled then
         -- Stop primary fire
         if args.input == Action.FireRight then
+            -- Stop the tool from firing over and over
+            if Client:GetElapsedSeconds()-nLastFire > 0.1 then
+                -- Use a tool
+                useTool()
+            end
+
             -- Store the last time we fired the event
             nLastFire = Client:GetElapsedSeconds()
 
-            -- Attempt to pickup an entity
-            pickupEntity()
+            -- Don't shoot
             return false
         end
 
@@ -209,13 +262,13 @@ Events:Subscribe("LocalPlayerInput", function(args)
             end
         end
 
+        -- Prevent weapon switching while in physgun mode
+        if (args.input == Action.SwitchWeapon) or (args.input == Action.NextWeapon) or (args.input == Action.PrevWeapon) then
+            return false
+        end
+
         -- Only do this if we have something grabbed
         if not hGrabbed then return end
-
-    	-- Prevent weapon switching while holding something
-    	if (args.input == Action.SwitchWeapon) or (args.input == Action.NextWeapon) or (args.input == Action.PrevWeapon) then
-    		return false
-    	end
 
         if args.input == Action.UseItem then
             return false
@@ -330,3 +383,22 @@ function spawnObjectFromMenu(e)
         physics = physics
     })
 end
+
+Events:Subscribe("Render", function()
+    if physEnabled then
+        local txt = "Unknown Tool"
+        local col = Color(255, 255, 255, 255)
+        local txtSize = TextSize.Large
+
+        -- Change the text based on their tool
+        if currentTool == TOOL_PHYSGUN then
+            txt = "Physgun"
+        elseif currentTool == TOOL_REMOVER then
+            txt = "Remover"
+        end
+
+        local pos = Vector2(190/2560*Render.Width - Render:GetTextWidth(txt, txtSize)/2, 345/1440 * Render.Height)
+
+        Render:DrawText(pos, txt, col, txtSize)
+    end
+end)

@@ -13,6 +13,9 @@ local pickupPlayersRequiresPermission = true
 -- Do people need permission to spawn objects?
 local spawningRequiresPermission = true
 
+-- Do people need permission to remove stuff?
+local removingRequiresPermission = true
+
 -- A whitelist to use if permission is required
 local whiteList = {
     ["STEAM_0:0:14045128"] = true,  -- Ash47
@@ -71,6 +74,31 @@ function AllowedToSpawn(ply)
     else
         -- Nope, allow them to use this
         return true
+    end
+end
+
+-- This function determines if a player can remove an object
+function AllowedToRemove(ply, ent)
+    -- Make sure an entity was parsed
+    if not ent then return false end
+
+    -- Pretty dodgy way to tell stuff apart
+    if ent.GetSteamId then
+        -- Must be a player
+
+        -- Don't allow anyone to remove players
+        return false
+    else
+        -- Must be something valid we can remove
+
+        -- Check if we are using a whitelist
+        if removingRequiresPermission then
+            -- Check if this player is on our whitelist
+            return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="remove_something"})
+        else
+            -- Nope, allow them to use this
+            return true
+        end
     end
 end
 
@@ -258,6 +286,31 @@ Network:Subscribe("47phys_Undo", function(args, ply)
         ply:SendChatMessage("Object was undone", Color(255, 0, 0, 255))
     else
         ply:SendChatMessage("There is nothing else you can undo", Color(255, 0, 0, 255))
+    end
+end)
+
+-- Player wants to remove something
+Network:Subscribe("47phys_Remove", function(args, ply)
+    -- Check if this player has permission to remove stuff
+    if not AllowedToRemove(ply, args.ent) then return end
+
+    -- Should probably check to make sure they parsed an entity
+
+    -- Check if the entity is still valid
+    if args.ent then
+        -- Remove from undo list -- TEMPORY
+        if not args.ent.GetDriver then
+            for k,v in pairs(undoList) do
+                for kk, vv in pairs(v) do
+                    if vv == args.ent then
+                        table.remove(v, kk)
+                    end
+                end
+            end
+        end
+
+        -- Remove the object
+        args.ent:Remove()
     end
 end)
 
