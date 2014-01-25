@@ -1,9 +1,3 @@
--- How often to update the physguned object (in seconds)
-local nUpdateTime = 0.1
-
--- A multiplier for the rotation speed, smaller means slower rotation
-local nRotationFactor = 1/50
-
 -- variables that need global plugin scope
 local hGrabbed
 local bRotating = false
@@ -12,9 +6,6 @@ local vCamPos
 local nNextThink = 0
 local vRot = Vector2(0, 0)
 local nLastFire = 0
-
--- Physgun is disabled by default
-local physEnabled = false
 
 -- Container for the spawn menu
 local spawnMenu
@@ -321,7 +312,7 @@ Events:Subscribe("LocalPlayerChat", function(args)
     local cmd = args.text:split(" ")
 
     -- Rotational speed command
-    if cmd[1] == "/rotspeed" then
+    if cmd[1]:lower() == commandPhysgunRotSpeed then
         if #cmd ~= 2 then
             Chat:Print("/rotspeed [speed]", Color(255, 0, 0, 255))
             Chat:Print("Note: The higher the number, the slower it rotates", Color(255, 0, 0, 255))
@@ -334,7 +325,7 @@ Events:Subscribe("LocalPlayerChat", function(args)
     end
 
     -- Toggle Physgun command
-    if cmd[1] == "/phys" then
+    if cmd[1]:lower() == commandPhysgunToggle then
         -- Toggle the physgun state
         physEnabled = not physEnabled
 
@@ -417,6 +408,25 @@ Events:Subscribe("Render", function()
         local pos = Vector2(190/2560*Render.Width - Render:GetTextWidth(txt, txtSize)/2, 345/1440 * Render.Height)
 
         Render:DrawText(pos, txt, col, txtSize)
+    end
+end)
+
+-- Add help item on load
+Events:Subscribe( "ModuleLoad", function()
+    if addHelpItem then
+        Events:Fire("HelpAddItem",{
+            name = helpItemName,
+            text = helpItemText
+        })
+    end
+end)
+
+-- Remove help item on unload
+Events:Subscribe( "ModuleUnload", function()
+    if addHelpItem then
+        Events:Fire( "HelpRemoveItem",{
+            name = helpItemName
+        })
     end
 end)
 

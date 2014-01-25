@@ -1,35 +1,10 @@
--- Allow client's to send where they think the vehicles are? (def: true)
-local trustClients = true
-
--- Do people need permission to pickup vehicles?
-local pickupVehiclesRequiresPermission = false
-
--- Do people need permission to pickup static objects?
-local pickupStaticRequiresPermission = false
-
--- Do people need permission to pickup players?
-local pickupPlayersRequiresPermission = true
-
--- Do people need permission to spawn objects?
-local spawningRequiresPermission = true
-
--- Do people need permission to remove stuff?
-local removingRequiresPermission = true
-
--- A whitelist to use if permission is required
-local whiteList = {
-    ["STEAM_0:0:14045128"] = true,  -- Ash47
-    ["STEAM_0:0:29540342"] = true,  -- Dude who helps me test
-    ["STEAM_0:0:Z4045122"] = true,  -- Another Example
-}
-
 -- Stores player's current undo status
 local undoList = {}
 
--- This function determines if a player can pickup a vehicle
+-- This function determines if a player can pickup a given entity
 function AllowedToPickup(ply, ent)
     -- Pretty dodgy way to tell stuff apart
-    if ent.GetSteamId then
+    if isPlayer(ent) then
         -- Must be a player
 
         -- Check if we are using a whitelist for players
@@ -40,7 +15,7 @@ function AllowedToPickup(ply, ent)
             -- Nope, allow them to use it
             return true
         end
-    elseif ent.GetDriver then
+    elseif isVehicle(ent) then
         -- Must be a vehicle
 
         -- Check if we are using a whitelist
@@ -65,6 +40,18 @@ function AllowedToPickup(ply, ent)
     end
 end
 
+-- This function determines if a player can pickup a vehicle that is occupied
+function AllowedToPickupOccupied(ply, ent)
+    -- Check if we are using a whitelist
+    if pickupVehiclesWithPlayersRequiresPermission then
+        -- Check if this player is on our whitelist
+        return whiteList[ply:GetSteamId().string] or not Events:Fire("ZEDPlayerHasPermission", {player=ply, permission="pickup_vehicles_occupied"})
+    else
+        -- Nope, allow them to use this
+        return true
+    end
+end
+
 -- This function determines if a player can spawn an object
 function AllowedToSpawn(ply)
     -- Check if we are using a whitelist
@@ -83,7 +70,7 @@ function AllowedToRemove(ply, ent)
     if not ent then return false end
 
     -- Pretty dodgy way to tell stuff apart
-    if ent.GetSteamId then
+    if isPlayer(ent) then
         -- Must be a player
 
         -- Don't allow anyone to remove players
@@ -105,15 +92,21 @@ end
 -- Table of what is picked up
 local oPickedUp = {}
 
-function canPickup(ply, veh)
+function canPickup(ply, ent)
+    -- Check if this is a vehicle
+    if isVehicle(ent) then
+        -- Check if someone is inside it
+        if ent:GetDriver() then
+            -- Ensure we have permission to pick it up
+            if not AllowedToPickupOccupied(ply, ent) then
+                return
+            end
+        end
+    end
+
     for k, v in pairs(oPickedUp) do
         --[[-- Check if this car is already physgun
-        if veh == v.veh then
-            return false
-        end
-
-        -- Check if this player has been picked up
-        if veh == v.otherPly then
+        if ent == v.ent then
             return false
         end]]
 
@@ -211,13 +204,13 @@ Network:Subscribe("47phys_Update", function(args, ply)
 
             -- Apply rotation
             ent:SetAngle(ent:GetAngle() * rotx * roty)
-        end
 
-        -- Check if we picked up a vehicle
-        if ent.GetDriver then
-            -- Stop it from falling
-            ent:SetLinearVelocity(Vector3(0, 0, 0))
-            ent:SetAngularVelocity(Vector3(0, 0, 0))
+            -- Check if we picked up a vehicle
+            if isVehicle(ent) then
+                -- Stop it from falling
+                ent:SetLinearVelocity(Vector3(0, 0, 0))
+                ent:SetAngularVelocity(Vector3(0, 0, 0))
+            end
         end
     end
 end)
@@ -323,4 +316,16 @@ function addUndo(ply, ent)
 
     -- Add this object into their undo list
     table.insert(undoList[sid], ent)
+end
+
+function isPlayer(ent)
+    return class_info(ent).name == "Player"
+end
+
+function isVehicle(ent)
+    return class_info(ent).name == "Vehicle"
+end
+
+function isStaticObject(ent)
+    return class_info(ent).name == "StaticObject"
 end
