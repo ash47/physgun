@@ -30,6 +30,15 @@ if Server then
         ["STEAM_0:0:29540342"] = true,  -- Dude who helps me test
         ["STEAM_0:0:Z4045122"] = true,  -- Another Example
     }
+
+    -- Error messages
+    physMessages = {
+        permPickup = "You don't have permission to pick this object up",
+        permSpawnStuff = "You don't have permission to spawn stuff",
+        undoNothingLeft = "There is nothing else you can undo",
+        permRemoveStuff = "You don't have permission to remove stuff",
+        undoSuccess = "Object was undone"
+    }
 end
 
 --[[

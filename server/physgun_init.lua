@@ -99,7 +99,7 @@ function canPickup(ply, ent)
         if ent:GetDriver() then
             -- Ensure we have permission to pick it up
             if not AllowedToPickupOccupied(ply, ent) then
-                return
+                return false
             end
         end
     end
@@ -173,8 +173,12 @@ Network:Subscribe("47phys_Pickup", function(args, ply)
             -- Update the entity
             ent:SetAngle(args.ang)
             ent:SetPosition(args.pos)
+
+            return
         end
     end
+
+    ply:SendChatMessage(physMessages.permPickup, Color(255, 0, 0, 255))
 end)
 
 function snapToDegree(newAng)
@@ -254,7 +258,10 @@ end)
 -- Player wants to spawn something
 Network:Subscribe("47phys_Spawn", function(args, ply)
     -- Check if this player has permission to spawn stuff
-    if not AllowedToSpawn(ply) then return end
+    if not AllowedToSpawn(ply) then
+        ply:SendChatMessage(physMessages.permSpawnStuff, Color(255, 0, 0, 255))
+        return
+    end
 
     -- Grab where the player is looking
     local oTrace = ply:GetAimTarget()
@@ -273,6 +280,9 @@ Network:Subscribe("47phys_Spawn", function(args, ply)
 
     -- Add this object to their undo list
     addUndo(ply, ent)
+
+    -- Tell the user it was successful
+    ply:SendChatMessage("Spawned "..args.model, Color(255, 0, 0, 255))
 end)
 
 -- Player wants to undo a spawned object
@@ -282,7 +292,7 @@ Network:Subscribe("47phys_Undo", function(args, ply)
 
     -- Make sure they have an undo list
     if not undoList[sid] then
-        ply:SendChatMessage("There is nothing else you can undo", Color(255, 0, 0, 255))
+        ply:SendChatMessage(physMessages.undoNothingLeft, Color(255, 0, 0, 255))
         return
     end
 
@@ -305,16 +315,19 @@ Network:Subscribe("47phys_Undo", function(args, ply)
             ent:Remove()
         end
 
-        ply:SendChatMessage("Object was undone", Color(255, 0, 0, 255))
+        ply:SendChatMessage(physMessages.undoSuccess, Color(255, 0, 0, 255))
     else
-        ply:SendChatMessage("There is nothing else you can undo", Color(255, 0, 0, 255))
+        ply:SendChatMessage(physMessages.undoNothingLeft, Color(255, 0, 0, 255))
     end
 end)
 
 -- Player wants to remove something
 Network:Subscribe("47phys_Remove", function(args, ply)
     -- Check if this player has permission to remove stuff
-    if not AllowedToRemove(ply, args.ent) then return end
+    if not AllowedToRemove(ply, args.ent) then
+        ply:SendChatMessage(physMessages.permRemoveStuff, Color(255, 0, 0, 255))
+        return
+    end
 
     -- Should probably check to make sure they parsed an entity
 
