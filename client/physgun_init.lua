@@ -9,16 +9,37 @@ local nLastFire = 0
 
 -- Container for the spawn menu
 local spawnMenu
+local toolMenu
 local inMenu = false
 
 -- Tool related stuff
-local TOOL_PHYSGUN = 1
-local TOOL_REMOVER = 2
-local MIN_TOOL = TOOL_PHYSGUN
-local MAX_TOOL = TOOL_REMOVER
-local currentTool = TOOL_PHYSGUN
+local currentTool = 1
 
-local function pickupEntity()
+-- We need to build the toollist once all the function are defined
+local toolList
+function buildToolList()
+    toolList = {
+        -- Physgun
+        [1] = {
+            name = 'Physgun',
+            use = pickupEntity
+        },
+
+        -- Remover
+        [2] = {
+            name = 'Remover',
+            pressed = removeEntity
+        },
+
+        -- Stacker
+        [3] = {
+            name = 'Stacker',
+            pressed = stackerTool
+        }
+    }
+end
+
+function pickupEntity()
     -- Make sure we haven't already grabbed something
     if not hGrabbed then
         local oTrace = LocalPlayer:GetAimTarget()
@@ -43,7 +64,7 @@ local function pickupEntity()
     end
 end
 
-local function removeEntity()
+function removeEntity()
     local oTrace = LocalPlayer:GetAimTarget()
 
     -- Attempt to remove an ent
@@ -58,21 +79,31 @@ local function removeEntity()
     end
 end
 
-local function dropEntity()
+function dropEntity()
     hGrabbed = nil
     bRotating = false
     Network:Send("47phys_Drop")
 end
 
-local function useTool(pressed)
-    if currentTool == TOOL_PHYSGUN then
-        -- Attempt to pickup an entity
-        pickupEntity()
-    elseif currentTool == TOOL_REMOVER then
-        if pressed then
-            -- Attempt to remove an entity
-            removeEntity()
-        end
+-- The stacker tool
+function stackerTool()
+
+end
+
+function useTool(pressed)
+    -- Grab the tool
+    local tool = toolList[currentTool]
+
+    -- Check if it has a press function
+    if pressed and tool.pressed then
+        -- Run the press function
+        tool.pressed()
+    end
+
+    -- Check if it has a use function
+    if tool.use then
+        -- Run the use function
+        tool.use()
     end
 end
 
@@ -103,13 +134,14 @@ Events:Subscribe("KeyDown", function(args)
             if spawnMenu then
                 -- Don't bother remaking it
                 spawnMenu:SetVisible(true)
+                toolMenu:SetVisible(true)
                 return
             end
 
-            -- Create the menu
+            -- Create the spawn menu
             spawnMenu = Window.Create()
-            spawnMenu:SetSizeRel(Vector2(0.3, 1))
-            spawnMenu:SetPosition(Vector2(Render.Width - spawnMenu:GetWidth(), 0))
+            spawnMenu:SetSizeRel(Vector2(0.3, 0.9))
+            spawnMenu:SetPosition(Vector2(0, Render.Height*0.05))
             spawnMenu:SetVisible(true)
             spawnMenu:SetTitle('Model Viewer')
 
@@ -118,6 +150,7 @@ Events:Subscribe("KeyDown", function(args)
 
             local rootNodes = {}
 
+            -- Add models
             for k, v in ipairs(models) do
                 local parts = split(v.name, "\\")
                 local root = rootNodes[parts[1]] or treeview:AddNode(parts[1])
@@ -132,6 +165,22 @@ Events:Subscribe("KeyDown", function(args)
                     child_node = node:AddNode(v2.model)
                     child_node:Subscribe("Select", self, spawnObjectFromMenu)
                 end
+            end
+
+            -- Create tool menu
+            toolMenu = Window.Create()
+            toolMenu:SetSizeRel(Vector2(0.1, 0.9))
+            toolMenu:SetPosition(Vector2(Render.Width - toolMenu:GetWidth(), Render.Height*0.05))
+            toolMenu:SetVisible(true)
+            toolMenu:SetTitle('Tool Menu - '..toolList[currentTool].name)
+
+            treeview = Tree.Create(toolMenu)
+            treeview:SetDock(GwenPosition.Fill)
+
+            -- Add tools
+            for k,v in ipairs(toolList) do
+                local node = treeview:AddNode(v.name)
+                node:Subscribe("Select", self, changeToolFromMenu)
             end
         end
 
@@ -156,8 +205,11 @@ Events:Subscribe("KeyUp", function(args)
         if args.key == string.byte("Q") then
             -- Check if we have a spawn menu
             if spawnMenu then
-                -- Remove the spawn menu
+                -- Hide the spawn menu
                 spawnMenu:SetVisible(false)
+
+                -- Hide the tool menu
+                toolMenu:SetVisible(false)
 
                 -- Hide the cursor
                 Mouse:SetVisible(false)
@@ -175,21 +227,6 @@ Events:Subscribe("MouseScroll", function(args)
         -- Check if we have something grabbed
         if hGrabbed then
             Network:Send("47phys_Zoom", args.delta)
-        else
-            -- Change tools
-            if args.delta > 0 then
-                currentTool = currentTool+1
-
-                if currentTool > MAX_TOOL then
-                    currentTool = MIN_TOOL
-                end
-            else
-                currentTool = currentTool-1
-
-                if currentTool < MIN_TOOL then
-                    currentTool = MAX_TOOL
-                end
-            end
         end
     end
 end)
@@ -392,18 +429,28 @@ function spawnObjectFromMenu(e)
     })
 end
 
+function changeToolFromMenu(e)
+    -- Grab the tool they selected
+    local newTool = e:GetText()
+
+    -- Find the tool
+    for k,v in pairs(toolList) do
+        if v.name == newTool then
+            -- Change to this tool
+            currentTool = k
+            break
+        end
+    end
+
+    -- Change the title of the menu
+    toolMenu:SetTitle('Tool Menu - '..toolList[currentTool].name)
+end
+
 Events:Subscribe("Render", function()
     if physEnabled then
-        local txt = "Unknown Tool"
+        local txt = toolList[currentTool].name
         local col = Color(255, 255, 255, 255)
         local txtSize = TextSize.Large
-
-        -- Change the text based on their tool
-        if currentTool == TOOL_PHYSGUN then
-            txt = "Physgun"
-        elseif currentTool == TOOL_REMOVER then
-            txt = "Remover"
-        end
 
         local pos = Vector2(190/2560*Render.Width - Render:GetTextWidth(txt, txtSize)/2, 345/1440 * Render.Height)
 
@@ -437,3 +484,6 @@ function split(s, delimiter)
     end
     return result;
 end
+
+-- Build the toollist
+buildToolList()
