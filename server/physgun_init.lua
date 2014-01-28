@@ -291,6 +291,14 @@ Network:Subscribe("47phys_Undo", function(args, ply)
         -- Grab the last entity spawned
         local ent = table.remove(undoList[sid], #undoList[sid])
 
+        -- Remove from grabbed objects
+        for k, v in pairs(oPickedUp) do
+            if areSameEnt(ent, v.ent) then
+                -- Remove from the table
+                table.remove(oPickedUp, k)
+            end
+        end
+
         -- Make sure the ent is still valid
         if ent then
             -- Remove the entity
@@ -313,13 +321,19 @@ Network:Subscribe("47phys_Remove", function(args, ply)
     -- Check if the entity is still valid
     if args.ent then
         -- Remove from undo list -- TEMPORY
-        if not args.ent.GetDriver then
-            for k,v in pairs(undoList) do
-                for kk, vv in pairs(v) do
-                    if vv == args.ent then
-                        table.remove(v, kk)
-                    end
+        for k,v in pairs(undoList) do
+            for kk, vv in pairs(v) do
+                if areSameEnt(args.ent, vv) then
+                    table.remove(v, kk)
                 end
+            end
+        end
+
+        -- Remove from grabbed objects
+        for k, v in pairs(oPickedUp) do
+            if areSameEnt(args.ent, v.ent) then
+                -- Remove from the table
+                table.remove(oPickedUp, k)
             end
         end
 
@@ -349,4 +363,15 @@ end
 
 function isStaticObject(ent)
     return class_info(ent).name == "StaticObject"
+end
+
+-- Checks if two entities are the same
+function areSameEnt(ent1, ent2)
+    if class_info(ent1).name == class_info(ent2).name then
+        if ent1 == ent2 then
+            return true
+        end
+    end
+
+    return false
 end
