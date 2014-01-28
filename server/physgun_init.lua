@@ -177,6 +177,13 @@ Network:Subscribe("47phys_Pickup", function(args, ply)
     end
 end)
 
+function snapToDegree(newAng)
+    -- Settings
+    local snap = math.pi/4
+
+    return math.floor(newAng/snap + 0.5)*snap
+end
+
 -- Player is sending updated rotational data
 Network:Subscribe("47phys_Update", function(args, ply)
     local pickup = getPickup(ply)
@@ -195,15 +202,29 @@ Network:Subscribe("47phys_Update", function(args, ply)
             -- Move Pickup
             ent:SetPosition((ply:GetPosition() + (args.a * Vector3(0,0,-dist))) + offset)
 
+            -- Grab the entities angles
+            local entAngle = (args.r and args.s and ent.realAngles) or ent:GetAngle()
+
             -- Workout rotations
-            local rx = -ent:GetAngle() * Vector3(0, 1, 0)
-            local ry = -ent:GetAngle() * Vector3(-math.cos(args.a.yaw), 0, math.sin(args.a.yaw))
+            local rx = -entAngle * Vector3(0, 1, 0)
+            local ry = -entAngle * Vector3(-math.cos(args.a.yaw), 0, math.sin(args.a.yaw))
 
             local rotx = Angle.AngleAxis((args.x or 0), rx)
             local roty = Angle.AngleAxis((args.y or 0), ry)
 
+            -- Workout the new angle
+            local newAng = entAngle * rotx * roty
+            ent.realAngles = entAngle * rotx * roty
+
+            -- Should we snap?
+            if args.r and args.s then
+                newAng.pitch = snapToDegree(newAng.pitch)
+                newAng.roll = snapToDegree(newAng.roll)
+                newAng.yaw = snapToDegree(newAng.yaw)
+            end
+
             -- Apply rotation
-            ent:SetAngle(ent:GetAngle() * rotx * roty)
+            ent:SetAngle(newAng)
 
             -- Check if we picked up a vehicle
             if isVehicle(ent) then

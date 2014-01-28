@@ -254,11 +254,20 @@ Events:Subscribe("PostTick", function()
             }
 
             -- Check if there was any rotation
-            if vRot.x ~= 0 then
-                data.x = vRot.x * nRotationFactor
-            end
-            if vRot.y ~= 0 then
-                data.y = vRot.y * nRotationFactor
+            if bRotating then
+                data.r = true
+
+                if vRot.x ~= 0 then
+                    data.x = vRot.x * nRotationFactor
+                end
+                if vRot.y ~= 0 then
+                    data.y = vRot.y * nRotationFactor
+                end
+
+                -- Left shift (constant is a little broken atm)
+                if Key:IsDown(160) then
+                    data.s = true
+                end
             end
 
             -- Send the update

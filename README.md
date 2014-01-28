@@ -7,7 +7,7 @@ Physgun for JC2: MP
 ###What are the controls?###
  - Type /phys to enable the physgun
  - Hold Primary Fire (Left Click by default) to grab things
- - While you have an object grabbed, hold E to rotate the object
+ - While you have an object grabbed, hold E to rotate the object, hold Shift to snap to the nearest 45 degrees
  - Scroll the mouse in and out to move what ever you are holding away from / towards yourself
 
 ###How do I access the spawn menu?###

@@ -41,7 +41,7 @@ if Client then
     nUpdateTime = 0.1
 
     -- A multiplier for the rotation speed, smaller means slower rotation (def: 1/50)
-    nRotationFactor = 1/50
+    nRotationFactor = 1/25
 
     -- Do you want to start users in physgun mode? (def: false)
     physEnabled = false
@@ -68,6 +68,7 @@ if Client then
                     "Physgun Mode:\n"..
                     " - Aim at a vehicle, player or static object and click to grab it\n"..
                     " - Hold E to rotate the object with the mouse\n"..
+                    " - Hold Shift while rotating to snap to the nearest 45 degrees\n"..
                     " - Use the scrollwheel to change the distance of the object\n"..
                     " - Hold Q to open the spawn menu\n"..
                     " - Expand the folders to find static objects, you can click on them to spawn them\n"..
