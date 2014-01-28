@@ -74,7 +74,7 @@ if Client then
                     " - Expand the folders to find static objects, you can click on them to spawn them\n"..
                     " - Static objects will spawn where you are looking\n"..
                     " - You can press Z to undo props in the order you spawned them\n"..
-                    " - You can change tools by scrolling the mouse\n"..
+                    " - You can change tools by by accessing the tools menu while holding Q\n"..
                     " - Your current tool is indicated below the map\n"..
                     "\n"..
                     "Tools:\n"..
