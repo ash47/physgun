@@ -79,6 +79,8 @@ if Client then
                     "\n"..
                     "Tools:\n"..
                     " - Remover - This allows you to remove static objects and vehicles\n"..
+                    " - Stacker - Right click two objects to calculate an offset, then click another to stack it\n"..
+                    " - Duplicator - Right click an object to copy, left click to paste\n"..
                     "\n"..
                     "Commands:\n"..
                     commandPhysgunToggle.." - Enable Physgun Mode\n"..

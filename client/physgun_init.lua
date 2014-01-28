@@ -6,6 +6,7 @@ local vCamPos
 local nNextThink = 0
 local vRot = Vector2(0, 0)
 local nLastFire = 0
+local nLastFire2 = 0
 
 -- Container for the spawn menu
 local spawnMenu
@@ -34,7 +35,15 @@ function buildToolList()
         -- Stacker
         [3] = {
             name = 'Stacker',
-            pressed = stackerTool
+            pressed = stackerTool,
+            pressed2 = stackerToolReference,
+        },
+
+        -- Duplicator
+        [4] = {
+            name = 'Duplicator',
+            pressed = duplicatorTool,
+            pressed2 = duplicatorToolReference
         }
     }
 end
@@ -86,24 +95,115 @@ function dropEntity()
 end
 
 -- The stacker tool
+local stackerRef = {
+    offset = Vector3(0, 0, 0)
+}
+local stackerOffsetObject
 function stackerTool()
+    local oTrace = LocalPlayer:GetAimTarget()
 
+    local ent = oTrace.entity
+    if ent and isStaticObject(ent) then
+        -- Tell the server
+        Network:Send("47phys_Spawn", {
+            model = ent:GetModel(),
+            collision = ent:GetCollision(),
+            pos = ent:GetPosition()+stackerRef.offset,
+            ang = ent:GetAngle()
+        })
+    else
+        -- Tell the client they can't stack this entity
+        Chat:Print("Can't stack this entity!", Color(255, 0, 0, 255))
+    end
+end
+function stackerToolReference()
+    local oTrace = LocalPlayer:GetAimTarget()
+
+    -- Attempt to grab an entity
+    local ent = oTrace.entity
+    if ent then
+        if stackerOffsetObject then
+            -- Store the offsets
+            stackerRef.offset = ent:GetPosition() - stackerOffsetObject:GetPosition()
+
+            -- Tell the user it worked
+            Chat:Print("Offset calculated!", Color(255, 0, 0, 255))
+
+            -- Reset stackerOffsetObject
+            stackerOffsetObject = nil
+        else
+            -- Store the ent
+            stackerOffsetObject = ent
+
+            -- Tell the user what to do
+            Chat:Print("Right click another target to set offsets", Color(255, 0, 0, 255))
+        end
+    end
 end
 
-function useTool(pressed)
+local dupRef
+function duplicatorTool()
+    -- Check if we have something selected
+    if dupRef then
+        -- Tell the server
+        Network:Send("47phys_Spawn", {
+            model = dupRef.model,
+            collision = dupRef.collision,
+            ang = dupRef.angle
+        })
+    else
+        -- Give error
+        Chat:Print("Right click something first", Color(255, 0, 0, 255))
+    end
+end
+
+function duplicatorToolReference()
+    local oTrace = LocalPlayer:GetAimTarget()
+
+    -- Attempt to grab an entity
+    local ent = oTrace.entity
+    if ent then
+        if isStaticObject(ent) then
+            dupRef = {
+                model = ent:GetModel(),
+                collision = ent:GetCollision(),
+                angle = ent:GetAngle()
+            }
+        else
+            -- Give error
+            Chat:Print("Can only duplicator static objects", Color(255, 0, 0, 255))
+        end
+    end
+end
+
+function useTool(pressed, secondary)
     -- Grab the tool
     local tool = toolList[currentTool]
 
-    -- Check if it has a press function
-    if pressed and tool.pressed then
-        -- Run the press function
-        tool.pressed()
-    end
+    if secondary then
+        -- Check if it has a press function
+        if pressed and tool.pressed2 then
+            -- Run the press function
+            tool.pressed2()
+        end
 
-    -- Check if it has a use function
-    if tool.use then
-        -- Run the use function
-        tool.use()
+        -- Check if it has a use function
+        if tool.use2 then
+            -- Run the use function
+            tool.use2()
+        end
+    else
+        -- Check if it has a press function
+        if pressed and tool.pressed then
+            -- Run the press function
+            tool.pressed()
+        end
+
+        -- Check if it has a use function
+        if tool.use then
+            -- Run the use function
+            tool.use()
+        end
     end
 end
 
@@ -304,6 +404,27 @@ Events:Subscribe("LocalPlayerInput", function(args)
             return false
         end
 
+        -- Stop 2ndary fire
+        if args.input == Action.FireLeft then
+            -- Only use a tool if we're not in a menu
+            if not inMenu then
+                -- Stop the tool from firing over and over
+                if Client:GetElapsedSeconds()-nLastFire2 > 0.1 then
+                    -- Use a tool
+                    useTool(true, true)
+                else
+                    -- The tool is being held
+                    useTool(false, true)
+                end
+
+                -- Store the last time we fired the event
+                nLastFire2 = Client:GetElapsedSeconds()
+            end
+
+            -- Don't shoot
+            return false
+        end
+
         -- Stop Q attack
         if args.input == Action.Kick then
             return false
@@ -430,11 +551,13 @@ function spawnObjectFromMenu(e)
         end
     end
 
+    -- Workout actual archive
+    local arch = basename(archive, '\\')
+
     -- Tell the server
     Network:Send("47phys_Spawn", {
-        archive = basename(archive, '\\'),
-        lod = lod,
-        physics = physics
+        model = arch.."/"..lod,
+        collision = arch.."/"..physics
     })
 end
 
