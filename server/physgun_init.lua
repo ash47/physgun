@@ -150,7 +150,7 @@ Network:Subscribe("47phys_Pickup", function(args, ply)
     -- Grab the entity they parsed
     local ent = args.ent
 
-    if ent and AllowedToPickup(ply, ent) then
+    if ent and IsValid(ent) and AllowedToPickup(ply, ent) then
         -- Check if someone else is already grabbing this entity
         if canPickup(ply, ent) then
             -- If we don't trust the clients, use server values
@@ -198,7 +198,7 @@ Network:Subscribe("47phys_Update", function(args, ply)
         local ent = pickup.ent
 
         -- Check if what we want to move is still valid
-        if ent then
+        if ent and IsValid(ent) then
             -- Grab offsets
             local offset = pickup.offset
             local dist = pickup.dist
@@ -310,7 +310,7 @@ Network:Subscribe("47phys_Undo", function(args, ply)
         end
 
         -- Make sure the ent is still valid
-        if ent then
+        if ent and IsValid(ent) then
             -- Remove the entity
             ent:Remove()
         end
@@ -332,7 +332,7 @@ Network:Subscribe("47phys_Remove", function(args, ply)
     -- Should probably check to make sure they parsed an entity
 
     -- Check if the entity is still valid
-    if args.ent then
+    if args.ent and IsValid(args.ent) then
         -- Remove from undo list -- TEMPORY
         for k,v in pairs(undoList) do
             for kk, vv in pairs(v) do

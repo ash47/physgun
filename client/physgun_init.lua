@@ -65,7 +65,8 @@ function pickupEntity()
                 ent = ent,
                 pos = ent:GetPosition(),
                 ang = ent:GetAngle(),
-                plyAngle = Camera:GetAngle()
+                plyAngle = Camera:GetAngle(),
+                hitPos = oTrace.position
             })
 
             return
